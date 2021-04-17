@@ -1,18 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
-
-// // ソケットテスト
-// import io from 'socket.io-client';
-// const socket = io(`http://localhost:3001`);
-
-// socket.on('connect', () => console.log('connect'));
+import 'index.css';
+import App from 'App';
+import Chat from 'pages/Chat/Chat';
+import reportWebVitals from 'reportWebVitals';
 
 ReactDOM.render(
   <React.StrictMode>
     <App />
+    <Chat />
   </React.StrictMode>,
   document.getElementById('root')
 );
