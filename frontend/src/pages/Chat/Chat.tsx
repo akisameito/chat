@@ -1,37 +1,25 @@
 import './Chat.css';
-import { useState/*, useEffect*/ } from 'react'
+import { useEffect, useState/*, useEffect*/ } from 'react'
+import socket from 'components/socket';
+import MessageArea from 'components/molecules/messageArea/MessageArea';
+import { MessageInterface, SendMessageInterface, ReceiveMessageInterface, RoomConnectionInfoInterface } from 'pages/chat/interfaceList'
 
-import io from 'socket.io-client';
-const port = 3001;
-const URL = `http://localhost:${port}`;
-var socket = io(URL, { autoConnect: false });
-interface Message {
-    text: string;
-    date: string;
-};
+class RoomConnectionInfo implements RoomConnectionInfoInterface {
+    publicKey = "";
+    privateKey = "";
+    roomId = "";
+    roomMembers = [""];
+}
+var roomConnectionInfo = new RoomConnectionInfo();
 
 function Chat() {
-    /**
-     * ソケット開始
-     */
-    function startSocket() {
-        socket.on('connection', (socket: any) => {
-            console.log("Hi client");
-            console.log(typeof socket);
-            console.log(socket);
-        });
-
-        // this.usernameAlreadySelected = true;
-        socket.auth = { username: "username" };
-        socket.connect();
-    }
-
-    // ソケット終了
-    function endSocket() {
-        // this.usernameAlreadySelected = true;
-        socket.auth = { username: "username" };
-        socket.connect();
-    }
+    /** ステート */
+    const [message, setMessage] = useState('');
+    const [messages, setMessages] = useState<MessageInterface[]>([{ text: "こんにちは", date: "12:10" }, { text: "こんばんは", date: "20:40" }]);
+    // レンダリング処理
+    useEffect(() => {
+        setMessages([...messages, { text: "おはよう", date: "08:10" }])
+    }, []);
 
     // エラー時の処理
     socket.on("connect_error", (err) => {
@@ -40,66 +28,88 @@ function Chat() {
         }
     });
 
-    // ソケット 受信
-    socket.on('makeRoom', function (msg: any) {
-        console.log('makeRoom');
-        console.log(msg);
+    // ルーム作成　受信
+    socket.on('makeRoom', function (response: RoomConnectionInfoInterface) {
+        console.log("makeRoom");
+        console.log(response);
+        roomConnectionInfo = response;
     });
 
+    /**
+     * メッセージ　受信
+     */
+    socket.on('chatMessage', function (response: ReceiveMessageInterface) {
+        setMessages([...messages, response.message]);
+        console.log('メッセージ受信');
+        console.log(response);
+        console.log(JSON.stringify(messages));
+        // setMessages(oldArray => [...oldArray, msg]);
 
-    /** ステート */
-    const [message, setMessage] = useState('');
-    const [displayMessages, setDisplayMessages] = useState<Message[]>([]);
+        // const newaaaaaa: Message[] = [...messages, msg];
+        // setMessages(() => newaaaaaa);
+    });
 
-
-    function socketTest() {
-        console.log('ソケット 送信: ' + message);
-
-        // ソケット 送信
-        socket.emit('chat message', message);
-        setMessage("");
-
-        // ソケット 受信
-        socket.on('chat message', function (msg: Message) {
-            console.log('ソケット 受信: ');
-            console.log(JSON.stringify(displayMessages));
-            setDisplayMessages([...displayMessages, msg]);
-            // setDisplayMessages(oldArray => [...oldArray, msg]);
-
-            // const newaaaaaa: Message[] = [...displayMessages, msg];
-            // setDisplayMessages(() => newaaaaaa);
-        });
-
+    /**
+     * ソケット開始
+     */
+    function startSocket() {
+        // this.usernameAlreadySelected = true;
+        socket.auth = { username: "username" };
+        socket.connect();
     }
+    // /**
+    //  * ソケット終了
+    //  */
+    // function endSocket() {
+    //     // this.usernameAlreadySelected = true;
+    //     socket.auth = { username: "username" };
+    //     socket.connect();
+    // }
+
+    /**
+     * ルーム作成
+     */
+    function makeRoom() {
+        startSocket();
+        socket.emit('makeRoom', sendMessage);
+    }
+
+    /**
+     * メッセージ送信
+     */
+    function sendMessage() {
+        // 送信データ作成
+        let sendMessage: SendMessageInterface = {
+            publicKey: roomConnectionInfo.publicKey,
+            privateKey: roomConnectionInfo.privateKey,
+            roomId: roomConnectionInfo.roomId,
+            message: {
+                text: message,
+            }
+        };
+        // メッセージ送信
+        socket.emit('chatMessage', sendMessage);
+        console.log('メッセージ送信');
+        console.log(sendMessage);
+
+        // メッセージクリア
+        // setMessage("");
+    }
+
     return (
         <div className="Chat">
             <h1>Chat</h1>
-
-            {/* ソケット接続 */}
-            <button onClick={startSocket}>ソケット接続</button>
-            {/* ソケット切断 */}
-            <button onClick={endSocket}>ソケット切断</button>
-
-
-
+            <button onClick={makeRoom}>ルーム作成</button>
+            {/* <button onClick={endSocket}>ソケット切断</button> */}
             <div>
-                {/* メッセージ表示欄 */}
-                {displayMessages.map((data) =>
-                    <>
-                        <span>{data.text} {data.date}</span><br />
-                    </>
-                )}
+                {/* <MessageArea message={"eeee"}></MessageArea> */}
+                <MessageArea messages={messages} />
                 <br />
-
-                {/* 入力欄 */}
                 <input type="text" value={message} onChange={e => setMessage(e.target.value)} />
                 <br />
-
-                {/* 送信ボタン */}
-                <button onClick={socketTest}>button socketTest</button>
+                <button onClick={sendMessage}>sendMessage</button>
                 <br />
             </div>
-            <p>{ }</p>
         </div>
     );
 }

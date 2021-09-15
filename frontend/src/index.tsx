@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import 'index.css';
 import App from 'App';
-import Chat from 'pages/Chat/Chat';
+import Chat from 'pages/chat/Chat';
 import reportWebVitals from 'reportWebVitals';
 
 ReactDOM.render(

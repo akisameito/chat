@@ -3,9 +3,10 @@ import express from 'express';
 import http from 'http';
 import { createPrivateKey } from 'node:crypto';
 import socketio from 'socket.io';
-import { WaitingUsers } from './waitingUsers';
+import { WaitingSockets } from './waitingSocket';
 import { Room } from './room';
 import { RoomStore } from './roomStore';
+import { User } from './user';
 
 // Expressインスタンスの作成 -------------------------------------------------------------
 const app: express.Express = express();
@@ -41,40 +42,43 @@ app.get('/api/test', function (req, res) { res.json({ test: 'テストAPI' }); }
 io.on('connection', (socket: socketio.Socket) => {
     console.log('connection');
 
-    let waitingUser = WaitingUsers.shiftUser();
+    socket.on('makeRoom', () => {
+        console.log('makeRoom');
+        // 待機中ソケット取得
+        let waitingSocket = WaitingSockets.shiftWaitingSocket();
+        if (waitingSocket === undefined) {
+            // 待機中ソケットがない場合、待機中ソケット配列に追加
+            WaitingSockets.saveWaitingSocket(socket);
+            console.log('add WaitingSockets');
+            return;
+        }
 
-    // 待機ユーザーがいない場合、待機ユーザー配列に追加
-    if (waitingUser === undefined) {
-        // 待機プールに追加
-        WaitingUsers.saveUser(socket.id);
+        // ユーザ作成
+        let requestUser = new User(socket.id); // ソケット送信ユーザ
+        let waitingUser = new User(waitingSocket.id); // 待機ユーザ
 
-        console.log('saveUser');
-        return;
-    }
-
-    // room作成
-    let room = new Room(socket.id, waitingUser);
-
-    // roomStoreに保存
-    RoomStore.saveRoom(room.getId(), room);
-
-    // TODO 新規と待機ユーザをツッコむか
-    socket.join(room.getId());
-
-    console.log("room作成");
-
-    // clientにroom作成の通知
-    io.to(socket.id).emit('makeRoom', {
-        user: room.getUser(socket.id),
-        roomId: room.getId(),
-        roomMembers: room.getUsersPublicId()
-    });
-
-    // clientにroom作成の通知
-    io.to(waitingUser).emit('makeRoom', {
-        user: room.getUser(waitingUser),
-        roomId: room.getId(),
-        roomMembers: room.getUsersPublicId()
+        // ルーム作成
+        let room = new Room(requestUser, waitingUser);
+        // ルームストアに保存
+        RoomStore.saveRoom(room.getId(), room);
+        // ルームに参加
+        socket.join(room.getId());
+        waitingSocket.join(room.getId());// TODO ブラウザからの応答があった場合にそっちでルームに入れた方がいい気もするな
+        console.log("room作成");
+        // clientにroom作成の通知
+        io.to(socket.id).emit('makeRoom', {
+            privateKey: requestUser.getPrivateKey(),
+            publicKey: requestUser.getPubulicKey(),
+            roomId: room.getId(),
+            roomMembers: room.getUsersPublicKey()
+        });
+        // clientにroom作成の通知
+        io.to(waitingSocket.id).emit('makeRoom', {
+            privateKey: waitingUser.getPrivateKey(),
+            publicKey: waitingUser.getPubulicKey(),
+            roomId: room.getId(),
+            roomMembers: room.getUsersPublicKey()
+        });
     });
 
     // // 待機中に切断されたら待機プールから削除
@@ -82,23 +86,41 @@ io.on('connection', (socket: socketio.Socket) => {
     //     roomId: "roomId"
     // });
 
-    // // クライアントから受ける
-    // socket.on('chat message', (msg) => {
-    //     console.log('ソケット 受信: ' + msg);
+    // クライアントから受ける
+    socket.on('chatMessage', (data) => {
+        console.log('chatMessage');
+        console.log('ソケット 受信:' + data.message.text);
+        // ルーム取得
+        let room = RoomStore.getRoom(data.roomId);
+        if (room === undefined) {
+            console.log("エラー　room")
+            return "エラーーー";
+        }
+        // ルーム参加者から検索
+        let user = room.searchUser(data.publicKey);
+        if (user === undefined) {
+            console.log("エラー　ルーム参加者")
+            return "エラーーー";
+        }
+        // 秘密鍵の確認
+        if (user.getPrivateKey() !== data.privateKey) {
+            console.log("エラー　秘密鍵")
+            return "エラーーー";
+        }
 
-    //     // クライアントに送付
-    //     io.emit('chat message',
-    //         {
-    //             publickKey: "publickKey",
-    //             text: msg,
-    //             dateTime: "2021/04/18 22:45:10"
-    //         }
-    //     );
-    //     console.log('ソケット 送信: ' + msg);
-    // });
+        //Room内の送信元以外の全員に送信
+        socket.broadcast.to(data.roomId).emit("chatMessage",
+            {
+                publickKey: data.publicKey,
+                message: {
+                    text: data.message.text,
+                    dateTime: new Date()
+                }
+            }
+        );
+        console.log('ソケット 送信:' + data.message.text);
+    });
 });
-
-
 
 // Expressサーバの/api以外のアクセスはすべてReactに渡せるように*(アスタリスク)設定を追加。
 // Reactにリクエストを渡す。

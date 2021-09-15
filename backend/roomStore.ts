@@ -8,7 +8,12 @@ export class RoomStore {
     static getRoom(roomId: string) {
         return this.rooms.get(roomId);
     }
-
+    /**
+     * ルーム保存
+     * 
+     * @param roomId ルームID
+     * @param room ルーム
+     */
     static saveRoom(roomId: string, room: Room) {
         this.rooms.set(roomId, room);
     }

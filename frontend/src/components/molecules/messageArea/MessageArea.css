@@ -1,0 +1,29 @@
+.button {
+    display: inline-block;
+    padding: 9px 19px;
+    border: 1px solid;
+    background-color: #00d6b0;
+    border-radius: 5px;
+    box-sizing: border-box;
+    font-size: 13px;
+    line-height: 1.2;
+    appearance: none;
+  }
+  
+  .button.button--green {
+    border-color: #00d6b0;
+    background-color: #00d6b0;
+    color: #fff;
+  }
+  
+  .button.button--greenOutline {
+    border-color: #00d6d0;
+    background-color: #fff;
+    color: #00d6d0;
+  }
+  
+  .button.button--grayOutline {
+    border-color: #808080;
+    background-color: #fff;
+    color: #333;
+  }
