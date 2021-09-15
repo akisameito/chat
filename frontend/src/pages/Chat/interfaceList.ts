@@ -1,6 +1,6 @@
 export interface MessageInterface {
     text: string;
-    date?: string;
+    datetime?: string;
 };
 export interface SendMessageInterface {
     publicKey: string;
