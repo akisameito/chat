@@ -1,20 +1,24 @@
-export interface MessageInterface {
-    text: string;
-    datetime?: string;
-};
-export interface SendMessageInterface {
-    publicKey: string;
-    privateKey: string;
-    roomId: string;
+export interface HistoryInterface {
+    isSelf: boolean;
     message: MessageInterface;
+}
+export interface MessageInterface {
+    userId: string;
+    text: string;
+    datetime?: number;
+    isRead?: boolean;
+};
+
+export interface SendMessageInterface {
+    token: string;
+    text: string;
 };
 export interface ReceiveMessageInterface {
-    publicKey: string;
-    message: MessageInterface;
+    userId: string;
+    text: string;
+    datetime: number;
 };
-export interface RoomConnectionInfoInterface {
-    publicKey: string;
-    privateKey: string;
-    roomId: string;
-    roomMembers: string[];
+
+export interface ReceiveRoomConnectInterface {
+    token: string;
 };

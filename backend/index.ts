@@ -7,6 +7,8 @@ import { WaitingSockets } from './waitingSocket';
 import { Room } from './room';
 import { RoomStore } from './roomStore';
 import { User } from './user';
+import { UserStore } from './userStore';
+import { userInfo } from 'os';
 
 // Expressインスタンスの作成 -------------------------------------------------------------
 const app: express.Express = express();
@@ -38,46 +40,49 @@ app.get('/api/test', function (req, res) { res.json({ test: 'テストAPI' }); }
 // // チャットログ出力
 // app.post('/api/exportChatLog', (req: express.Request, res: express.Response) => { });
 
-
 io.on('connection', (socket: socketio.Socket) => {
     console.log('connection');
 
     socket.on('makeRoom', () => {
-        console.log('makeRoom');
+        console.log('****イベント ルーム作成****');
         // 待機中ソケット取得
         let waitingSocket = WaitingSockets.shiftWaitingSocket();
         if (waitingSocket === undefined) {
             // 待機中ソケットがない場合、待機中ソケット配列に追加
             WaitingSockets.saveWaitingSocket(socket);
-            console.log('add WaitingSockets');
+            console.log('追加 待機ソケット');
             return;
         }
 
+        // TODO 待機中ソケットがすでに切断されている可能性もあるので、疎通確認でブラウザからの応答があった場合にルームへ入れる分岐追加
+
         // ユーザ作成
-        let requestUser = new User(socket.id); // ソケット送信ユーザ
-        let waitingUser = new User(waitingSocket.id); // 待機ユーザ
+        let rUser = new User(socket.id, socket.handshake.address); // ソケット送信ユーザ
+        let wUser = new User(waitingSocket.id, socket.handshake.address); // 待機ユーザ
+        // ストアに保存
+        UserStore.save(rUser);
+        UserStore.save(wUser);
+        console.log("作成 ユーザ:", UserStore);
+
 
         // ルーム作成
-        let room = new Room(requestUser, waitingUser);
-        // ルームストアに保存
-        RoomStore.saveRoom(room.getId(), room);
+        let room = new Room(rUser, wUser);
+        // ストアに保存
+        RoomStore.save(room);
         // ルームに参加
-        socket.join(room.getId());
-        waitingSocket.join(room.getId());// TODO ブラウザからの応答があった場合にそっちでルームに入れた方がいい気もするな
-        console.log("room作成");
+        room.join(socket, rUser.id);
+        room.join(waitingSocket, wUser.id);
+        rUser.roomId = room.id;
+        wUser.roomId = room.id;
+        console.log("作成 ルーム:", RoomStore);
+
         // clientにroom作成の通知
         io.to(socket.id).emit('makeRoom', {
-            privateKey: requestUser.getPrivateKey(),
-            publicKey: requestUser.getPubulicKey(),
-            roomId: room.getId(),
-            roomMembers: room.getUsersPublicKey()
+            token: rUser.getToken(),
         });
         // clientにroom作成の通知
         io.to(waitingSocket.id).emit('makeRoom', {
-            privateKey: waitingUser.getPrivateKey(),
-            publicKey: waitingUser.getPubulicKey(),
-            roomId: room.getId(),
-            roomMembers: room.getUsersPublicKey()
+            token: wUser.getToken(),
         });
     });
 
@@ -88,37 +93,36 @@ io.on('connection', (socket: socketio.Socket) => {
 
     // クライアントから受ける
     socket.on('chatMessage', (data) => {
-        console.log('chatMessage');
-        console.log('ソケット 受信:' + data.message.text);
-        // ルーム取得
-        let room = RoomStore.getRoom(data.roomId);
-        if (room === undefined) {
-            console.log("エラー　room")
+        console.log('****イベント チャットメッセージ****');
+        console.log('トークン:' + data.token);
+        console.log('メッセージ:' + data.text);
+        // ユーザ取得
+        const user = UserStore.get(data.token);
+        if (user === undefined) {
+            console.log("エラー トークン認証")
             return "エラーーー";
         }
-        // ルーム参加者から検索
-        let user = room.searchUser(data.publicKey);
-        if (user === undefined) {
+        // ルーム取得
+        const room = RoomStore.get(user.roomId);
+        console.log("RoomStore.get", room);
+        if (room === undefined) {
+            console.log("エラー ルーム不在")
+            return "エラーーー";
+        }
+        // ルームの参加者に存在するか
+        if (!room.isMember(user.id)) {
             console.log("エラー　ルーム参加者")
             return "エラーーー";
         }
-        // 秘密鍵の確認
-        if (user.getPrivateKey() !== data.privateKey) {
-            console.log("エラー　秘密鍵")
-            return "エラーーー";
-        }
+        // sessioinが書き変わっている場合、joinしなおす必要がある...??
 
         //Room内の送信元以外の全員に送信
-        socket.broadcast.to(data.roomId).emit("chatMessage",
-            {
-                publickKey: data.publicKey,
-                message: {
-                    text: data.message.text,
-                    dateTime: new Date()
-                }
-            }
-        );
-        console.log('ソケット 送信:' + data.message.text);
+        socket.broadcast.to(room.id).emit("chatMessage", {
+            userId: user.id,
+            text: data.text,
+            datetime: Date.now()
+        });
+        console.log('ルーム内に送信', data.text);
     });
 });
 

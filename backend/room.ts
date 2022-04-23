@@ -1,22 +1,28 @@
 import { User } from './user';
-import { MessageStore } from './messageStore';
+import socketio from 'socket.io';
 
-export class Room {
+/**
+ * ユーザ情報
+ */
+interface RoomInterface {
     /** 
-     * ルームid
-     * 
+     * ID
      * ルーム参加者のプライベートidを利用して作成
      */
-    private id: string;
-
+    readonly id: string;
+    /** メンバー */
+    member: string[];
     /** ルーム作成日時 */
-    private startTime: string;
+    readonly datetime: number;
+};
 
-    /** ルーム参加者一覧 */
-    private users: User[] = [];
+export class Room implements RoomInterface {
+    id;
+    member: string[];
+    datetime;
 
     /** ルームメッセージ履歴 */
-    private messageStore: MessageStore;
+    // private messageStore: MessageStore;
 
     /**
      * コンストラクタ
@@ -25,52 +31,21 @@ export class Room {
      * @param user2 ユーザ2
      */
     constructor(user1: User, user2: User) {
-        // ルーム参加者追加
-        this.users.push(user1);
-        this.users.push(user2);
-
-        // ルームID作成
-        this.id = "roomID_" + this.users[0].getPrivateKey() + this.users[1].getPrivateKey();// TODO publicじゃない？
-
-        this.startTime = new Date().toLocaleString();
-        this.messageStore = new MessageStore();
+        this.id = "roomID_" + user1.getId() + user2.getId();
+        this.member = [user1.getId(), user2.getId()];
+        this.datetime = Date.now();
+        // this.messageStore = new MessageStore();
     }
 
-    /**
-     * ルームID取得
-     * 
-     * @returns ルームid
-     */
-    public getId(): string {
-        return this.id;
+    /** メンバー数 */
+    public countMembers(): number {
+        return this.member.length;
     }
-
-    // /**
-    //  * privateidに一致するユーザーのpublicidとprivateidを返却する
-    //  * @param privateKey 
-    //  * @returns 
-    //  */
-    // public getUser(privateKey: string): User | undefined {
-    //     return this.users.find((v) => v.getPrivateKey() === privateKey);
-    // }
-
-    /**
-     * 公開IDを配列で返却する
-     * @returns 
-     */
-    public getUsersPublicKey(): string[] {
-        return this.users.map(item => item["publicKey"]);
+    public join(socket: socketio.Socket, userId: User["id"]) {
+        socket.join(this.id);
+        this.member.push(userId);// TODO コンストラクタでやるべきか
     }
-
-    public countUsers() {
-        return this.users.length;
-    }
-
-    public searchUser(pubulicKey: string): User | undefined {
-        return this.users.find((v) => v.getPubulicKey() === pubulicKey);
+    public isMember(userId: string) {
+        return this.member.includes(userId);
     }
 }
-
-// module.exports = {
-//     Room
-// };
