@@ -1,8 +1,7 @@
-// モジュールの読み込み -------------------------------------------------------------
 import express from 'express';
-import http from 'http';
+import { createServer } from "http";
+import { Server } from "socket.io";
 import { createPrivateKey } from 'node:crypto';
-import socketio from 'socket.io';
 import { WaitingSockets } from './waitingSocket';
 import { Room } from './room';
 import { RoomStore } from './roomStore';
@@ -10,16 +9,35 @@ import { User } from './user';
 import { UserStore } from './userStore';
 import { userInfo } from 'os';
 
-// Expressインスタンスの作成 -------------------------------------------------------------
-const app: express.Express = express();
+// Expressインスタンスの作成
+const app = express();
+const httpServer = createServer(app);
 
-const server: http.Server = http.createServer(app);
-const io: socketio.Server = new socketio.Server(server, {
-    cors: {
-        origin: "http://localhost:3000",
-    }
-});
+// socketio作成
+export interface ServerToClientEvents { // emit
+    connect: () => void;
+    makeUser: () => void;
+    makeRoom: (token: string) => void;
+    chatMessage: (userId: string, text: string, datetime: number) => void;
+}
+export interface ClientToServerEvents { // on
+    connect: () => void;
+    makeUser: () => void;
+    connect_error: () => void;
+    disconnect: () => void;
+    makeRoom: () => void;
+    chatMessage: (token: string, text: string) => void;
+}
+interface InterServerEvents {
+}
+interface SocketData {
+    token: string;
+}
 
+const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
+    httpServer
+    , { cors: { origin: "http://localhost:3000", } }
+);
 const port = process.env.PORT || 3001;
 
 const router: express.Router = express.Router();
@@ -40,9 +58,12 @@ app.get('/api/test', function (req, res) { res.json({ test: 'テストAPI' }); }
 // // チャットログ出力
 // app.post('/api/exportChatLog', (req: express.Request, res: express.Response) => { });
 
-io.on('connection', (socket: socketio.Socket) => {
-    console.log('connection');
-
+io.on('connection', (socket) => {
+    console.log('****イベント connection****');
+    socket.on("connect", () => console.log('****イベント connect****'));
+    socket.on("connect_error", () => console.log('****イベント connect_error****'));
+    socket.on("disconnect", () => console.log("****イベント 切断****"));// 何分後までかにACCESSがない場合、ユーザ削除など
+    socket.on("makeUser", () => console.log("****イベント ユーザ作成****"));
     socket.on('makeRoom', () => {
         console.log('****イベント ルーム作成****');
         // 待機中ソケット取得
@@ -77,13 +98,9 @@ io.on('connection', (socket: socketio.Socket) => {
         console.log("作成 ルーム:", RoomStore);
 
         // clientにroom作成の通知
-        io.to(socket.id).emit('makeRoom', {
-            token: rUser.getToken(),
-        });
+        io.to(socket.id).emit('makeRoom', rUser.getToken());
         // clientにroom作成の通知
-        io.to(waitingSocket.id).emit('makeRoom', {
-            token: wUser.getToken(),
-        });
+        io.to(waitingSocket.id).emit('makeRoom', wUser.getToken());
     });
 
     // // 待機中に切断されたら待機プールから削除
@@ -92,12 +109,12 @@ io.on('connection', (socket: socketio.Socket) => {
     // });
 
     // クライアントから受ける
-    socket.on('chatMessage', (data) => {
+    socket.on('chatMessage', (token, text) => {
         console.log('****イベント チャットメッセージ****');
-        console.log('トークン:' + data.token);
-        console.log('メッセージ:' + data.text);
+        console.log('トークン:', token);
+        console.log('メッセージ:', text);
         // ユーザ取得
-        const user = UserStore.get(data.token);
+        const user = UserStore.get(token);
         if (user === undefined) {
             console.log("エラー トークン認証")
             return "エラーーー";
@@ -117,12 +134,7 @@ io.on('connection', (socket: socketio.Socket) => {
         // sessioinが書き変わっている場合、joinしなおす必要がある...??
 
         //Room内の送信元以外の全員に送信
-        socket.broadcast.to(room.id).emit("chatMessage", {
-            userId: user.id,
-            text: data.text,
-            datetime: Date.now()
-        });
-        console.log('ルーム内に送信', data.text);
+        socket.broadcast.to(room.id).emit("chatMessage", user.id, text, Date.now());
     });
 });
 
@@ -136,6 +148,6 @@ io.on('connection', (socket: socketio.Socket) => {
 /**********************************************
  serverをportへlistenさせる
 **********************************************/
-server.listen(port, () => {
+httpServer.listen(port, () => {
     console.log(`listening on *:${port}`);
 })

@@ -1,8 +1,11 @@
-import socket from 'components/socket';
 import { useCookies } from "react-cookie";
 
 import { useState, useEffect } from 'react';
 import { MessageInterface, SendMessageInterface, ReceiveMessageInterface, ReceiveRoomConnectInterface } from 'pages/chat/interfaceList'
+
+import { io, Socket } from "socket.io-client";
+import { ServerToClientEvents, ClientToServerEvents } from "../../../backend";
+const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io();
 
 export const useChat = () => {
     /** メッセージログ */
@@ -28,16 +31,16 @@ export const useChat = () => {
     const makeRoom = () => {
         console.log("リクエスト ルーム作成");
         startSocket();
-        socket.emit('makeRoom', sendMessage);
+        socket.emit('makeRoom');
         makedRoom();
     }
     /**
      * ルーム作成イベント受信 responseMakeRoom
      */
     const makedRoom = () => {
-        socket.on('makeRoom', function (response: ReceiveRoomConnectInterface) {
-            console.log("作成 ルーム", response);
-            setCookie("token", response.token); // TODO K.Yosdhimoto セキュアにする。HttpOnlyなど
+        socket.on('makeRoom', (token) => {
+            console.log("作成 ルーム", token);
+            setCookie("token", token); // TODO K.Yosdhimoto セキュアにする。HttpOnlyなど
             // メッセージ受信イベント
             receiveMessage();
         });
@@ -51,13 +54,8 @@ export const useChat = () => {
     const sendMessage = (message: string) => {
         if (!message) return;
 
-        // 送信データ作成
-        let sendMessage: SendMessageInterface = {
-            token: cookies.token,
-            text: message
-        };
         // メッセージ送信
-        socket.emit('chatMessage', sendMessage);
+        socket.emit('chatMessage', cookies.token, message);
         console.log('送信 メッセージ', sendMessage);
     }
     /**
@@ -65,7 +63,12 @@ export const useChat = () => {
      */
     const receiveMessage = () => {
         // メッセージ受信イベント
-        socket.on('chatMessage', function (response: ReceiveMessageInterface) {
+        socket.on('chatMessage', (userId, text, datetime) => {
+            const response = {
+                userId: userId,
+                text: text,
+                datetime: datetime
+            }
             console.log('受信 メッセージ', response);
             setMessageHistory(pre => [...pre, response]);
             /* useChatコンポーネントがrenderingされた場合に、messageHistoryステートが再宣言されるので、
