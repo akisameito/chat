@@ -13,7 +13,8 @@ function Chat() {
 
     const {
         messageHistory,
-        makeRoom,
+        createUser,
+        startChat,
         sendMessage,
     } = useChat();
 
@@ -24,7 +25,9 @@ function Chat() {
     }
     return (
         <div className="Chat">
-            <button onClick={makeRoom}>ルーム作成</button>
+            <button onClick={createUser}>ユーザ作成</button>
+            <br />
+            <button onClick={startChat}>ルーム作成</button>
             <div>
                 <input type="text" ref={msgEl} />
                 <br />

@@ -26,21 +26,44 @@ export const useChat = () => {
     }
     // ------------------------------------------------------------------------------------------------------
     /**
-     * ルーム作成 requestMakeRoom
+     * ユーザ作成
      */
-    const makeRoom = () => {
-        console.log("リクエスト ルーム作成");
+    const createUser = () => {
+        console.log("****イベント****ユーザ作成リクエスト");
         startSocket();
-        socket.emit('makeRoom');
-        makedRoom();
+        createdUser()
+        socket.emit('createUser');
+    }
+    const createdUser = () => {
+        socket.on('createdUser', (token) => {
+            console.log("****イベント****ユーザ作成完了", token);
+            setCookie("token", token); // TODO K.Yosdhimoto セキュアにする。HttpOnlyなど
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------------------
+    /**
+     * ルーム作成 
+     */
+    const startChat = () => {
+        console.log("****イベント****チャット開始リクエスト");
+        waitStartChat();
+        startedChat();
+        socket.emit('startChat', cookies.token);
     }
     /**
      * ルーム作成イベント受信 responseMakeRoom
      */
-    const makedRoom = () => {
-        socket.on('makeRoom', (token) => {
-            console.log("作成 ルーム", token);
-            setCookie("token", token); // TODO K.Yosdhimoto セキュアにする。HttpOnlyなど
+    const waitStartChat = () => {
+        socket.on('waitStartChat', () => {
+            console.log("****イベント****チャット開始待機");
+        });
+
+    }
+    const startedChat = () => {
+        socket.on('startedChat', (member) => {
+            console.log("****イベント****チャット開始", member);
+            // setCookie("member", member);// 再描画などで消えれば、tokenを利用して再取得すればいいだけなので、クッキーに入れる必要はないよな
             // メッセージ受信イベント
             receiveMessage();
         });
@@ -53,23 +76,22 @@ export const useChat = () => {
      */
     const sendMessage = (message: string) => {
         if (!message) return;
-
         // メッセージ送信
-        socket.emit('chatMessage', cookies.token, message);
-        console.log('送信 メッセージ', sendMessage);
+        socket.emit('sendMessage', cookies.token, message);
+        console.log('****イベント****メッセージ送信', message);
     }
     /**
      * メッセージ受信
      */
     const receiveMessage = () => {
         // メッセージ受信イベント
-        socket.on('chatMessage', (userId, text, datetime) => {
+        socket.on('receiveMessage', (userId, text, datetime) => {
             const response = {
                 userId: userId,
                 text: text,
                 datetime: datetime
             }
-            console.log('受信 メッセージ', response);
+            console.log('****イベント****メッセージ受信', response);
             setMessageHistory(pre => [...pre, response]);
             /* useChatコンポーネントがrenderingされた場合に、messageHistoryステートが再宣言されるので、
             ↓messageHistoryが空配列となってしまう。 */
@@ -90,7 +112,8 @@ export const useChat = () => {
     return {
         /** 現在のTODOリスト */
         messageHistory,
-        makeRoom,
+        createUser,
+        startChat,
         sendMessage,
     }
 }

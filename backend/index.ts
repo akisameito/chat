@@ -14,19 +14,20 @@ const app = express();
 const httpServer = createServer(app);
 
 // socketio作成
-export interface ServerToClientEvents { // emit
-    connect: () => void;
-    makeUser: () => void;
-    makeRoom: (token: string) => void;
-    chatMessage: (userId: string, text: string, datetime: number) => void;
-}
 export interface ClientToServerEvents { // on
     connect: () => void;
-    makeUser: () => void;
     connect_error: () => void;
+    createUser: () => void;
     disconnect: () => void;
-    makeRoom: () => void;
-    chatMessage: (token: string, text: string) => void;
+    startChat: (token: string) => void;
+    sendMessage: (token: string, text: string) => void;
+}
+export interface ServerToClientEvents { // emit
+    connect: () => void;
+    createdUser: (token: string) => void;
+    startedChat: (member: string[]) => void;
+    waitStartChat: () => void;
+    receiveMessage: (userId: string, text: string, datetime: number) => void;
 }
 interface InterServerEvents {
 }
@@ -63,44 +64,53 @@ io.on('connection', (socket) => {
     socket.on("connect", () => console.log('****イベント connect****'));
     socket.on("connect_error", () => console.log('****イベント connect_error****'));
     socket.on("disconnect", () => console.log("****イベント 切断****"));// 何分後までかにACCESSがない場合、ユーザ削除など
-    socket.on("makeUser", () => console.log("****イベント ユーザ作成****"));
-    socket.on('makeRoom', () => {
-        console.log('****イベント ルーム作成****');
-        // 待機中ソケット取得
-        let waitingSocket = WaitingSockets.shiftWaitingSocket();
-        if (waitingSocket === undefined) {
-            // 待機中ソケットがない場合、待機中ソケット配列に追加
-            WaitingSockets.saveWaitingSocket(socket);
-            console.log('追加 待機ソケット');
+
+    // ユーザ作成
+    socket.on("createUser", () => {
+        console.log("****イベント ユーザ作成****")
+        const user = new User(socket.id, socket.handshake.address); // ユーザ作成
+        UserStore.save(user); // ストアに保存
+        io.to(socket.id).emit('createdUser', user.getToken()); // 作成を通知
+    });
+
+    // ルーム作成
+    socket.on('startChat', (token) => {
+        // ユーザ取得
+        const user = UserStore.get(token);
+        if (!user) {
+            return console.log("エラー トークン認証");
+        }
+
+        // 待機ユーザ取得
+        const wait = UserStore.shiftWaitUser();
+        console.log("待機ユーザ取得 %o", wait);
+        let room;
+        if (!wait) { // 存在しない場合、
+            // 待機ユーザ追加
+            UserStore.saveWaitUser(user);
+            // ルーム作成
+            room = new Room();
+            RoomStore.save(room);
+            // ルームに参加
+            room.join(socket, user.id);
+            user.roomId = room.id;
+            io.to(socket.id).emit('waitStartChat');
             return;
         }
 
-        // TODO 待機中ソケットがすでに切断されている可能性もあるので、疎通確認でブラウザからの応答があった場合にルームへ入れる分岐追加
-
-        // ユーザ作成
-        let rUser = new User(socket.id, socket.handshake.address); // ソケット送信ユーザ
-        let wUser = new User(waitingSocket.id, socket.handshake.address); // 待機ユーザ
-        // ストアに保存
-        UserStore.save(rUser);
-        UserStore.save(wUser);
-        console.log("作成 ユーザ:", UserStore);
-
-
-        // ルーム作成
-        let room = new Room(rUser, wUser);
-        // ストアに保存
-        RoomStore.save(room);
+        // ルーム取得
+        room = RoomStore.get(wait.roomId);
+        if (!room) {
+            // ルームを作り直すかどうするか。元のユーザもどうするか。
+            return console.log("ルーム非存在エラー");
+        }
         // ルームに参加
-        room.join(socket, rUser.id);
-        room.join(waitingSocket, wUser.id);
-        rUser.roomId = room.id;
-        wUser.roomId = room.id;
-        console.log("作成 ルーム:", RoomStore);
+        room.join(socket, user.id);
+        user.roomId = room.id;
+        // ルーム作成通知
+        io.to(room.id).emit("startedChat", room.member);
+        // socket.broadcast.to(room.id).emit("startedChat", room.member);
 
-        // clientにroom作成の通知
-        io.to(socket.id).emit('makeRoom', rUser.getToken());
-        // clientにroom作成の通知
-        io.to(waitingSocket.id).emit('makeRoom', wUser.getToken());
     });
 
     // // 待機中に切断されたら待機プールから削除
@@ -109,7 +119,7 @@ io.on('connection', (socket) => {
     // });
 
     // クライアントから受ける
-    socket.on('chatMessage', (token, text) => {
+    socket.on('sendMessage', (token, text) => {
         console.log('****イベント チャットメッセージ****');
         console.log('トークン:', token);
         console.log('メッセージ:', text);
@@ -134,7 +144,7 @@ io.on('connection', (socket) => {
         // sessioinが書き変わっている場合、joinしなおす必要がある...??
 
         //Room内の送信元以外の全員に送信
-        socket.broadcast.to(room.id).emit("chatMessage", user.id, text, Date.now());
+        socket.broadcast.to(room.id).emit("receiveMessage", user.id, text, Date.now());
     });
 });
 

@@ -26,13 +26,10 @@ export class Room implements RoomInterface {
 
     /**
      * コンストラクタ
-     * 
-     * @param user1 ユーザ1
-     * @param user2 ユーザ2
      */
-    constructor(user1: User, user2: User) {
-        this.id = "roomID_" + user1.getId() + user2.getId();
-        this.member = [user1.getId(), user2.getId()];
+    constructor() {
+        this.id = "roomID_" + Math.random().toString(32).substring(2);
+        this.member = [];
         this.datetime = Date.now();
         // this.messageStore = new MessageStore();
     }
