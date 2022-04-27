@@ -5,7 +5,7 @@ export interface HistoryInterface {
 export interface MessageInterface {
     userId: string;
     text: string;
-    datetime?: number;
+    datetime?: string;
     isRead?: boolean;
 };
 

@@ -11,6 +11,8 @@ export const useChat = () => {
     /** メッセージログ */
     const [messageHistory, setMessageHistory] = useState<MessageInterface[]>([]);
     const [cookies, setCookie] = useCookies(["token"]);
+    const [member, setMember] = useState<string[]>([]);
+
     useEffect(() => {
         console.log("レンダリング useChat");
     });
@@ -29,9 +31,10 @@ export const useChat = () => {
      * ユーザ作成
      */
     const createUser = () => {
+        // TODO ユーザ作成済みかチェック
         console.log("****イベント****ユーザ作成リクエスト");
         startSocket();
-        createdUser()
+        createdUser();
         socket.emit('createUser');
     }
     const createdUser = () => {
@@ -61,8 +64,9 @@ export const useChat = () => {
 
     }
     const startedChat = () => {
-        socket.on('startedChat', (member) => {
-            console.log("****イベント****チャット開始", member);
+        socket.on('startedChat', (_member) => {
+            console.log("****イベント****チャット開始", _member);
+            setMember(_member);
             // setCookie("member", member);// 再描画などで消えれば、tokenを利用して再取得すればいいだけなので、クッキーに入れる必要はないよな
             // メッセージ受信イベント
             receiveMessage();
@@ -86,10 +90,11 @@ export const useChat = () => {
     const receiveMessage = () => {
         // メッセージ受信イベント
         socket.on('receiveMessage', (userId, text, datetime) => {
+            const date = new Date(datetime);
             const response = {
                 userId: userId,
                 text: text,
-                datetime: datetime
+                datetime: date.getHours()+":"+date.getMinutes()+":"+date.getSeconds()// TODO ソートのキーとして利用したいので、時刻を表示する方法は考える(日付が消えるので不可になる)
             }
             console.log('****イベント****メッセージ受信', response);
             setMessageHistory(pre => [...pre, response]);
@@ -112,6 +117,8 @@ export const useChat = () => {
     return {
         /** 現在のTODOリスト */
         messageHistory,
+        member,
+        cookies,// TODO デバッグ用削除予定
         createUser,
         startChat,
         sendMessage,

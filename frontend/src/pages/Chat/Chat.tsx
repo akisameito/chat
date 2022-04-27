@@ -13,6 +13,8 @@ function Chat() {
 
     const {
         messageHistory,
+        member,
+        cookies,
         createUser,
         startChat,
         sendMessage,
@@ -25,17 +27,36 @@ function Chat() {
     }
     return (
         <div className="Chat">
-            <button onClick={createUser}>ユーザ作成</button>
-            <br />
-            <button onClick={startChat}>ルーム作成</button>
+            <hr />
+            <div style={{ display: "flex" }}>
+                <div style={{ border: "solid", width: "300px", backgroundColor: "#c8c2c6" }}>
+                    <b>ユーザ</b>
+                    <pre>トークン:<pre>{cookies.token}</pre></pre>
+                    <button onClick={createUser}>ユーザ作成</button>
+                </div>
+                <div style={{ border: "solid", width: "300px", backgroundColor: "#c8c2c6" }}>
+                    <b>ルーム</b>
+                    <pre>メンバー:<pre>{member.join("\n")}</pre></pre>
+                    <button onClick={startChat}>ルーム作成</button>
+                </div>
+            </div>
+            <hr />
+
             <div>
                 <input type="text" ref={msgEl} />
                 <br />
                 <button onClick={handleSendMessage}>送信</button>
-                <br />
-                {messageHistory.map((msg) => (
-                    <p key={msg.datetime}>{msg.text}</p>
-                ))}
+                <div>
+                    {messageHistory.map((msg) => {
+                        return (
+                            <p key={msg.datetime}
+                                style={{ border: "solid", width: "350px", backgroundColor: "#bce2e8" }}
+                            >
+                                [{msg.datetime}]　{msg.text}
+                            </p>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );
