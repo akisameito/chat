@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { instrument } from "@socket.io/admin-ui";
 import { createPrivateKey } from 'node:crypto';
 import { WaitingSockets } from './waitingSocket';
 import { Room } from './room';
@@ -35,10 +36,19 @@ interface SocketData {
     token: string;
 }
 
-const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
-    httpServer
-    , { cors: { origin: "http://localhost:3000", } }
-);
+const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(httpServer, {
+    cors: {
+        origin: ["http://localhost:3000", "http://localhost:8080"],
+        credentials: true
+    }
+});
+instrument(io, {
+    auth: {
+        type: "basic",
+        username: "admin",
+        password: "$2b$10$heqvAkYMez.Va6Et2uXInOnkCT6/uQj1brkrbyG3LpopDklcq7ZOS" // "changeit" encrypted with bcrypt
+    },
+});
 const port = process.env.PORT || 3001;
 
 const router: express.Router = express.Router();
