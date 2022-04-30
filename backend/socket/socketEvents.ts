@@ -153,11 +153,10 @@ function sendMessage(
     }
     // sessioinが書き変わっている場合、joinしなおす必要がある...??
 
-    io.in("room1").emit(/* ... */);
-
     //Room内の送信元以外の全員に送信
     eL("emit", "receiveMessage", JSON.stringify({ userId: user.id, text: params.text, datetime: Date.now() }));
-    io.in(room.id).emit("receiveMessage", { userId: user.id, text: params.text, datetime: Date.now() });
+    socket.broadcast.to(room.id).emit("receiveMessage", { userId: user.id, text: params.text, datetime: Date.now() });
+    // io.in(room.id).emit("receiveMessage", { userId: user.id, text: params.text, datetime: Date.now() });
 }
 
 // export function onCreateUser() {
