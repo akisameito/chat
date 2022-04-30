@@ -11,24 +11,8 @@ import { createPrivateKey } from 'node:crypto';
 
 module.exports = function (io: Server<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>) {
     io.on('connection', (socket) => {
-
-        eL("on", "connection", JSON.stringify(socket.handshake.auth));
-        // トークンが保持されている場合、
-        if (socket.handshake.auth?.token) {
-            // ユーザ作成済みか
-            const user = UserStore.get(socket.handshake.auth.token);
-            // 入室中ルームが存在するか
-            if (user?.roomId) {
-                const room = RoomStore.get(user.roomId);
-                // ソケットをルームに入れなおす
-                if (room) {
-                    room.join(socket, user.id);
-                }
-            }
-        }
-
         // 初回接続チェック
-        socket.on("connect", () => connect(io, socket));
+        initCheck(socket);
         // ユーザ作成
         socket.on("createUser", () => createUser(io, socket));
         // ルーム作成
@@ -41,16 +25,28 @@ module.exports = function (io: Server<ClientToServerEventsInterface, ServerToCli
     });
 }
 
-function connect(
-    io: Server<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>,
-    socket: Socket<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>,
+function initCheck(
+    socket: Socket<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>
 ) {
-    // eL("on", "connect")
-    // ユーザの情報を再送
-    // ユーザID
-    // ルームID
-    // ルームに再代入
-    // eL("emit", "connect")
+    eL("on", "connection", JSON.stringify(socket.handshake.auth));
+    // トークンが存在するか、
+    if (!socket.handshake.auth?.token) {
+        return;
+    }
+
+    // ユーザ作成かつ、入室中ルーム設定済みか、
+    const user = UserStore.get(socket.handshake.auth.token);
+    if (!user?.roomId) {
+        return;
+    }
+    
+    // ルーム存在かつ、ルームメンバーか、
+    const room = RoomStore.get(user.roomId);
+    if (!room) {
+        return;
+    }
+    // ソケットをルームに入れなおす
+    room.join(socket, user.id);
 }
 
 /**
@@ -157,9 +153,11 @@ function sendMessage(
     }
     // sessioinが書き変わっている場合、joinしなおす必要がある...??
 
+    io.in("room1").emit(/* ... */);
+
     //Room内の送信元以外の全員に送信
     eL("emit", "receiveMessage", JSON.stringify({ userId: user.id, text: params.text, datetime: Date.now() }));
-    socket.broadcast.to(room.id).emit("receiveMessage", { userId: user.id, text: params.text, datetime: Date.now() });
+    io.in(room.id).emit("receiveMessage", { userId: user.id, text: params.text, datetime: Date.now() });
 }
 
 // export function onCreateUser() {
