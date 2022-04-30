@@ -3,16 +3,47 @@ import { Room } from './../room';
 import { RoomStore } from './../roomStore';
 import { UserStore } from './../userStore';
 
-import * as sEIf from './interface/socketEventsInterface'
+import { ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface } from './interface/socketEventsInterface'
+import { StartChatInterface, SendMessageInterface } from './interface/socketEventsInterface'
 
 import { Server, Socket } from "socket.io";
 import { createPrivateKey } from 'node:crypto';
 
+module.exports = function (io: Server<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>) {
+    io.on('connection', (socket) => {
 
+        eL("on", "connection", JSON.stringify(socket.handshake.auth));
+        // トークンが保持されている場合、
+        if (socket.handshake.auth?.token) {
+            // ユーザ作成済みか
+            const user = UserStore.get(socket.handshake.auth.token);
+            // 入室中ルームが存在するか
+            if (user?.roomId) {
+                const room = RoomStore.get(user.roomId);
+                // ソケットをルームに入れなおす
+                if (room) {
+                    room.join(socket, user.id);
+                }
+            }
+        }
 
-export function connect(
-    io: Server<sEIf.ClientToServerEventsInterface, sEIf.ServerToClientEventsInterface, sEIf.InterServerEventsInterface, sEIf.SocketDataInterface>,
-    socket: Socket<sEIf.ClientToServerEventsInterface, sEIf.ServerToClientEventsInterface, sEIf.InterServerEventsInterface, sEIf.SocketDataInterface>,
+        // 初回接続チェック
+        socket.on("connect", () => connect(io, socket));
+        // ユーザ作成
+        socket.on("createUser", () => createUser(io, socket));
+        // ルーム作成
+        socket.on('startChat', (params) => startChat(io, socket, params));
+        // クライアントメッセージを受ける
+        socket.on('sendMessage', (params) => sendMessage(io, socket, params));
+
+        socket.on("connect_error", () => eL("on", "connect_error"));
+        socket.on("disconnect", () => eL("on", "disconnect", JSON.stringify(socket.data)));// 何分後までかにACCESSがない場合、ユーザ削除など
+    });
+}
+
+function connect(
+    io: Server<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>,
+    socket: Socket<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>,
 ) {
     // eL("on", "connect")
     // ユーザの情報を再送
@@ -27,9 +58,9 @@ export function connect(
  * 
  * @param socket 
  */
-export function createUser(
-    io: Server<sEIf.ClientToServerEventsInterface, sEIf.ServerToClientEventsInterface, sEIf.InterServerEventsInterface, sEIf.SocketDataInterface>,
-    socket: Socket<sEIf.ClientToServerEventsInterface, sEIf.ServerToClientEventsInterface, sEIf.InterServerEventsInterface, sEIf.SocketDataInterface>,
+function createUser(
+    io: Server<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>,
+    socket: Socket<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>,
 ) {
     eL("on", "createUser")
     // ユーザ作成
@@ -49,10 +80,10 @@ export function createUser(
  * @param params 
  * @returns 
  */
-export function startChat(
-    io: Server<sEIf.ClientToServerEventsInterface, sEIf.ServerToClientEventsInterface, sEIf.InterServerEventsInterface, sEIf.SocketDataInterface>,
-    socket: Socket<sEIf.ClientToServerEventsInterface, sEIf.ServerToClientEventsInterface, sEIf.InterServerEventsInterface, sEIf.SocketDataInterface>,
-    params: sEIf.StartChatInterface
+function startChat(
+    io: Server<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>,
+    socket: Socket<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>,
+    params: StartChatInterface
 ) {
     eL("on", "startChat", JSON.stringify(params));
     // ユーザ取得
@@ -98,10 +129,10 @@ export function startChat(
  * @param param 
  * @returns 
  */
-export function sendMessage(
-    io: Server<sEIf.ClientToServerEventsInterface, sEIf.ServerToClientEventsInterface, sEIf.InterServerEventsInterface, sEIf.SocketDataInterface>,
-    socket: Socket<sEIf.ClientToServerEventsInterface, sEIf.ServerToClientEventsInterface, sEIf.InterServerEventsInterface, sEIf.SocketDataInterface>,
-    params: sEIf.SendMessageInterface
+function sendMessage(
+    io: Server<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>,
+    socket: Socket<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>,
+    params: SendMessageInterface
 ) {
     eL("on", "sendMessage", JSON.stringify(params));
     console.log('トークン:', params.token);

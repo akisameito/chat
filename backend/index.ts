@@ -2,10 +2,6 @@ import express from 'express';
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { instrument } from "@socket.io/admin-ui";
-import { RoomStore } from './roomStore';
-import { UserStore } from './userStore';
-
-import { connect, createUser, startChat, sendMessage } from './socket/socketEvents'
 import { ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface } from './socket/interface/socketEventsInterface'
 
 // Expressインスタンスの作成
@@ -59,35 +55,7 @@ app.get('/api/test', function (req, res) { res.json({ test: 'テストAPI' }); }
 /**********************************************
  socketIO処理
 **********************************************/
-function eL(type: string, title: string, param?: any) { console.log(`**${type}** [${title}]`, param ? (" : " + param) : ""); }
-io.on('connection', (socket) => {
-    eL("on", "connection", JSON.stringify(socket.handshake.auth));
-    // トークンが保持されている場合、
-    if (socket.handshake.auth?.token) {
-        // ユーザ作成済みか
-        const user = UserStore.get(socket.handshake.auth.token);
-        // 入室中ルームが存在するか
-        if (user?.roomId) {
-            const room = RoomStore.get(user.roomId);
-            // ソケットをルームに入れなおす
-            if (room) {
-                room.join(socket, user.id);
-            }
-        }
-    }
-
-    // 初回接続チェック
-    socket.on("connect", () => connect(io, socket));
-    // ユーザ作成
-    socket.on("createUser", () => createUser(io, socket));
-    // ルーム作成
-    socket.on('startChat', (params) => startChat(io, socket, params));
-    // クライアントメッセージを受ける
-    socket.on('sendMessage', (params) => sendMessage(io, socket, params));
-
-    socket.on("connect_error", () => eL("on", "connect_error"));
-    socket.on("disconnect", () => eL("on", "disconnect", JSON.stringify(socket.data)));// 何分後までかにACCESSがない場合、ユーザ削除など
-});
+require('./socket/socketEvents')(io);
 
 /**********************************************
  Expressサーバの/api以外のアクセスはすべてReactに渡せるように*(アスタリスク)設定を追加。
