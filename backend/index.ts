@@ -1,28 +1,27 @@
 import express from 'express';
 import { createServer } from "http";
-import { Server, Socket } from "socket.io";
+import { Server } from "socket.io";
 import { instrument } from "@socket.io/admin-ui";
-import { createPrivateKey } from 'node:crypto';
-import { Room } from './room';
 import { RoomStore } from './roomStore';
-import { User } from './user';
 import { UserStore } from './userStore';
 
-import {connect, createUser, startChat, sendMessage} from './socket/socketEvents'
-import * as sEIf from './socket/interface/socketEventsInterface'
+import { connect, createUser, startChat, sendMessage } from './socket/socketEvents'
+import { ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface } from './socket/interface/socketEventsInterface'
 
 // Expressインスタンスの作成
 const app = express();
 const httpServer = createServer(app);
 
-
-
-const io = new Server<sEIf.ClientToServerEventsInterface, sEIf.ServerToClientEventsInterface, sEIf.InterServerEventsInterface, sEIf.SocketDataInterface>(httpServer, {
+const io = new Server<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>(httpServer, {
     cors: {
         origin: ["http://localhost:3000", "http://localhost:8080"],
         credentials: true
     }
 });
+
+/**********************************************
+ ミドルウェアの追加
+**********************************************/
 instrument(io, {
     auth: {
         type: "basic",
@@ -34,13 +33,20 @@ const port = process.env.PORT || 3001;
 
 const router: express.Router = express.Router();
 
-// ミドルウェアの追加 -------------------------------------------------------------
+/**********************************************
+ ミドルウェアの追加
+**********************************************/
 // app.use(require("/backend/api/logger.js"));
 // app.use(express.static(path.join(__dirname, '../frontend/build'))); // herokuに上げる場合に利用
 
-// ルーティングの追加 -------------------------------------------------------------
+/**********************************************
+ ルーティングの追加 // TODO 残っていたコメントをコピペしただけで、実際にはAPI処理に見える。
+**********************************************/
 app.get('/api/test', function (req, res) { res.json({ test: 'テストAPI' }); });
 
+/**********************************************
+ api処理
+**********************************************/
 // // サイトニュース取得
 // // app.get('/api/getSiteNews', require("./router/user.js"));
 // // 接続中ユーザー数取得
@@ -50,12 +56,11 @@ app.get('/api/test', function (req, res) { res.json({ test: 'テストAPI' }); }
 // // チャットログ出力
 // app.post('/api/exportChatLog', (req: express.Request, res: express.Response) => { });
 
-function eL(type: string, title: string, param?: any) {
-    console.log(`**${type}** [${title}]`, param ? (" : " + param) : "");
-}
-
+/**********************************************
+ socketIO処理
+**********************************************/
+function eL(type: string, title: string, param?: any) { console.log(`**${type}** [${title}]`, param ? (" : " + param) : ""); }
 io.on('connection', (socket) => {
-
     eL("on", "connection", JSON.stringify(socket.handshake.auth));
     // トークンが保持されている場合、
     if (socket.handshake.auth?.token) {
@@ -84,12 +89,13 @@ io.on('connection', (socket) => {
     socket.on("disconnect", () => eL("on", "disconnect", JSON.stringify(socket.data)));// 何分後までかにACCESSがない場合、ユーザ削除など
 });
 
-// Expressサーバの/api以外のアクセスはすべてReactに渡せるように*(アスタリスク)設定を追加。
-// Reactにリクエストを渡す。
+/**********************************************
+ Expressサーバの/api以外のアクセスはすべてReactに渡せるように*(アスタリスク)設定を追加。
+ Reactにリクエストを渡す。 // TODO 残っていたコメントをコピペしただけで、実際にはよくわからない。
+**********************************************/
 // app.get('*', (req: express.Request, res: express.Response) => {
 //     res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
 // });
-
 
 /**********************************************
  serverをportへlistenさせる
