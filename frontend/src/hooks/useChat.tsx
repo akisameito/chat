@@ -38,7 +38,7 @@ export const useChat = () => {
     useEffect(() => {
         // トークンの設定
         socket.auth = { token: cookies?.token };
-        // ハンドシェイク実行
+
         socket.on("connect", () => {
             eL("on", "connect");
             // if (cookies?.token) {
@@ -48,6 +48,10 @@ export const useChat = () => {
             //     socket.emit('reconnect', cookies?.token);
             // }
         });
+        createdUser();
+        waitStartChat();
+        startedChat();
+        receiveMessage();
         socket.on("disconnect", (reason) => eL("on", "disconnect", reason));
         socket.io.on("error", (error) => eL("on", "error", error));
         socket.io.on("reconnect_attempt", (attempt) => eL("on", "reconnect_attempt", attempt));
@@ -58,50 +62,14 @@ export const useChat = () => {
 
     // useEffect()利用することで、コンポーネントマウント後に処理を実行
 
-    /**
-     * ソケット開始
-     */
-    const startSocket = () => {
-        if (!socket.connected) {
-            console.log("ソケットあり");
-        } else {
-            console.log("ソケット無し");
-        }
-        eL("emit", "ソケット開始");
-        socket.connect();
-
-        // メンバー存在チェック
-        // TODO ユーザ作成済みかチェック
-    }
-    // ------------------------------------------------------------------------------------------------------
-    /**
-     * ユーザ作成
-     */
-    const createUser = () => {
-        // TODO ユーザ作成済みかチェック
-        startSocket();
-        createdUser();
-        eL("emit", "createUser");
-        socket.emit('createUser');
-    }
+    /**********************************************
+     on
+    **********************************************/
     const createdUser = () => {
         socket.on('createdUser', (params) => {
             eL("on", "createdUser", params.token);
             setCookie("token", params.token); // TODO K.Yosdhimoto セキュアにする。HttpOnlyなど
         });
-    }
-
-    // ------------------------------------------------------------------------------------------------------
-    /**
-     * ルーム作成 
-     */
-    const startChat = () => {
-        if (socket.connected) {
-            waitStartChat();
-            startedChat();
-            eL("emit", "startChat");
-            socket.emit('startChat', { token: cookies.token });
-        }
     }
     /**
      * ルーム作成イベント受信 responseMakeRoom
@@ -110,28 +78,13 @@ export const useChat = () => {
         socket.on('waitStartChat', () => {
             eL("on", "waitStartChat");
         });
-
     }
     const startedChat = () => {
         socket.on('startedChat', (params) => {
             eL("on", "startedChat", params.member);
             setMember(params.member);
             // setCookie("member", member);// 再描画などで消えれば、tokenを利用して再取得すればいいだけなので、クッキーに入れる必要はないよな
-            // メッセージ受信イベント
-            receiveMessage();
         });
-    }
-    // ------------------------------------------------------------------------------------------------------
-
-    /**
-     * メッセージ送信
-     * @param message 
-     */
-    const sendMessage = (message: string) => {
-        if (!message) return;
-        // メッセージ送信
-        eL("emit", "sendMessage");
-        socket.emit('sendMessage', { token: cookies.token, text: message });
     }
     /**
      * メッセージ受信
@@ -152,6 +105,56 @@ export const useChat = () => {
             // setMessageHistory([...messageHistory, response]);
         });
     }
+
+    /**********************************************
+     emit
+    **********************************************/
+    /**
+     * ソケット開始
+     */
+    const startSocket = () => {
+        if (!socket.connected) {
+            console.log("ソケットあり");
+        } else {
+            console.log("ソケット無し");
+        }
+        eL("emit", "ソケット開始");
+        // ハンドシェイク実行
+        socket.connect();
+
+        // メンバー存在チェック
+        // TODO ユーザ作成済みかチェック
+    }
+    /**
+     * ユーザ作成
+     */
+    const createUser = () => {
+        // TODO ユーザ作成済みかチェック
+        startSocket();
+        eL("emit", "createUser");
+        socket.emit('createUser');
+    }
+
+    /**
+     * ルーム作成 
+     */
+    const startChat = () => {
+        if (socket.connected) {
+            eL("emit", "startChat");
+            socket.emit('startChat', { token: cookies.token });
+        }
+    }
+    /**
+     * メッセージ送信
+     * @param message 
+     */
+    const sendMessage = (message: string) => {
+        if (!message) return;
+        // メッセージ送信
+        eL("emit", "sendMessage");
+        socket.emit('sendMessage', { token: cookies.token, text: message });
+    }
+
     // /**
     //  * エラー時の処理
     //  */
