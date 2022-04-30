@@ -12,6 +12,7 @@
     "@types/react": "^18.0.6",
     "@types/react-dom": "^18.0.2",
     "@types/react-router-dom": "^5.3.3",
+    "debug": "^4.3.4",
     "react": "^18.1.0-next-fc47cb1b6-20220404",
     "react-cookie": "^4.1.1",
     "react-dom": "^18.1.0-next-fc47cb1b6-20220404",
