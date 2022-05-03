@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-function Home() {
+function Top() {
     return (
         <>
             <h1>ホーム</h1>
@@ -14,4 +14,4 @@ function Home() {
     );
 }
 
-export default Home;
+export default Top;
