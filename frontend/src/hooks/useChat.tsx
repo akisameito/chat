@@ -5,22 +5,11 @@ import { MessageInterface, SendMessageInterface, ReceiveMessageInterface, Receiv
 
 import { io, Socket } from "socket.io-client";
 import { ServerToClientEventsInterface, ClientToServerEventsInterface } from "../../../backend/socket/interface/socketEventsInterface";
-const socket: Socket<ServerToClientEventsInterface, ClientToServerEventsInterface> = io(
-    //"ws://localhost:3000/", {
-    // reconnectionDelayMax: 10000,
-    // auth: {
-    //     token: "123"
-    // },
-    // query: {
-    //     "my-key": "my-value"
-    // }
-    //}
-    // {
-    //     auth: (cb) => {
-    //         cb({ token: cookies.token })
-    //     }
-    // }
-);// TODO パラメータに「http://localhost:3000」を渡して、サーバサイドのcorsを消しても動くっぽい
+const socket: Socket<ServerToClientEventsInterface, ClientToServerEventsInterface> = io({
+    auth: (cb: any) => {
+        cb({ token: "" })
+    }
+});// TODO パラメータに「http://localhost:3000」を渡して、サーバサイドのcorsを消しても動くっぽい
 
 function eL(type: string, title: string, param?: any) {
     console.log(`**${type}** [${title}]`, param ? (" : " + param) : "");
@@ -66,9 +55,10 @@ export const useChat = () => {
      on
     **********************************************/
     const createdUser = () => {
-        socket.on('createdUser', (params) => {
-            eL("on", "createdUser", params.token);
-            setCookie("token", params.token); // TODO K.Yosdhimoto セキュアにする。HttpOnlyなど
+        socket.on('createdUser', () => {
+            eL("on", "createdUser", JSON.stringify(socket.auth));// TODO K.Yoshimoto どうも、サーバーサイドで扱うものではないらしいな、トークン。
+            const auth: any = socket.auth;// socket.auth.tokenだと未定義エラーがでるので。TODO auth用型定義作るべき。
+            setCookie("token", auth.token ?? ""); // TODO K.Yosdhimoto セキュアにする。HttpOnlyなど
         });
     }
     /**
@@ -141,7 +131,7 @@ export const useChat = () => {
     const startChat = () => {
         if (socket.connected) {
             eL("emit", "startChat");
-            socket.emit('startChat', { token: cookies.token });
+            socket.emit('startChat');
         }
     }
     /**
@@ -152,7 +142,7 @@ export const useChat = () => {
         if (!message) return;
         // メッセージ送信
         eL("emit", "sendMessage");
-        socket.emit('sendMessage', { token: cookies.token, text: message });
+        socket.emit('sendMessage', { text: message });
     }
 
     // /**

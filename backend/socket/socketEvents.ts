@@ -4,7 +4,7 @@ import { RoomStore } from './../roomStore';
 import { UserStore } from './../userStore';
 
 import { ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface } from './interface/socketEventsInterface'
-import { StartChatInterface, SendMessageInterface } from './interface/socketEventsInterface'
+import { SendMessageInterface } from './interface/socketEventsInterface'
 
 import { Server, Socket } from "socket.io";
 import { createPrivateKey } from 'node:crypto';
@@ -16,7 +16,7 @@ module.exports = function (io: Server<ClientToServerEventsInterface, ServerToCli
         // ユーザ作成
         socket.on("createUser", () => createUser(io, socket));
         // ルーム作成
-        socket.on('startChat', (params) => startChat(io, socket, params));
+        socket.on('startChat', () => startChat(io, socket));
         // クライアントメッセージを受ける
         socket.on('sendMessage', (params) => sendMessage(io, socket, params));
 
@@ -39,7 +39,7 @@ function initCheck(
     if (!user?.roomId) {
         return;
     }
-    
+
     // ルーム存在かつ、ルームメンバーか、
     const room = RoomStore.get(user.roomId);
     if (!room) {
@@ -62,28 +62,32 @@ function createUser(
     // ユーザ作成
     const user = new User(socket.id, socket.handshake.address);
     UserStore.save(user); // ストアに保存
-    socket.data.token = user.getToken();
 
     // 作成を通知
-    eL("emit", "createdUser", JSON.stringify({ token: user.getToken() }));
-    io.to(socket.id).emit('createdUser', { token: user.getToken() });
+    socket.handshake.auth.token = user.getToken();// トークン設定
+    eL("emit", "createdUser", JSON.stringify(socket.handshake.auth));
+    io.to(socket.id).emit('createdUser');
 }
 
 /**
  * 
  * @param io 
  * @param socket 
- * @param params 
  * @returns 
  */
 function startChat(
     io: Server<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>,
-    socket: Socket<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>,
-    params: StartChatInterface
+    socket: Socket<ClientToServerEventsInterface, ServerToClientEventsInterface, InterServerEventsInterface, SocketDataInterface>
 ) {
-    eL("on", "startChat", JSON.stringify(params));
+    eL("on", "startChat");
+    // トークンが存在するか、
+    if (!socket.handshake.auth?.token) {
+        return;
+    }
+    const token = socket.handshake.auth.token;
+
     // ユーザ取得
-    const user = UserStore.get(params.token);
+    const user = UserStore.get(token);
     if (!user) { return console.log("エラー トークン認証"); }
 
     // 待機ユーザ取得
@@ -131,10 +135,17 @@ function sendMessage(
     params: SendMessageInterface
 ) {
     eL("on", "sendMessage", JSON.stringify(params));
-    console.log('トークン:', params.token);
+    // トークンが存在するか、
+    if (!socket.handshake.auth?.token) {
+        return;
+    }
+    const token = socket.handshake.auth.token;
+    console.log('トークン:', token);
     console.log('メッセージ:', params.text);
+
+
     // ユーザ取得
-    const user = UserStore.get(params.token);
+    const user = UserStore.get(token);
     if (user === undefined) {
         console.log("エラー トークン認証")
         return "エラーーー";

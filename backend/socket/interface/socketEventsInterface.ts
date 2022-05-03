@@ -7,19 +7,13 @@ export interface ClientToServerEventsInterface { // on
     connect_error: () => void;
     createUser: () => void;
     disconnect: () => void;
-    startChat: (params: StartChatInterface) => void;
+    startChat: () => void;
     sendMessage: (params: SendMessageInterface) => void;
-}
-export interface StartChatInterface {
-    /** トークン */
-    token: string,
 }
 /**
  * token, text
  */
 export interface SendMessageInterface {
-    /** トークン */
-    token: string,
     /** 本文 */
     text: string
 }
@@ -30,14 +24,10 @@ export interface SendMessageInterface {
 export interface ServerToClientEventsInterface {
     connect: () => void;
     // reconnectedUser: (member?: string[]) => void;// TODO メッセージ
-    createdUser: (params: CreatedUserInterface) => void;
+    createdUser: () => void;
     startedChat: (params: StartedChatInterface) => void;
     waitStartChat: () => void;
     receiveMessage: (params: ReceiveMessageInterface) => void;
-}
-export interface CreatedUserInterface {
-    /** トークン */
-    token: string
 }
 export interface StartedChatInterface {
     member: string[]
@@ -55,5 +45,4 @@ export interface InterServerEventsInterface {
  * ソケットイベント時の受け渡しデータ
  */
 export interface SocketDataInterface {
-    token: string;
 }
