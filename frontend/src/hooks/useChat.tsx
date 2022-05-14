@@ -15,9 +15,16 @@ function eL(type: string, title: string, param?: any) {
     console.log(`**${type}** [${title}]`, param ? (" : " + param) : "");
 }
 
-export const useChat = () => {
+export interface UseChatInterface {
+    messageList: MessageInterface[],
+    member: string[],
+    cookies: any,// TODO デバッグ用削除予定
+    startChat: () => void;
+    sendMessage: (message: string) => void;
+}
+export const useChat = (): UseChatInterface => {
     /** メッセージログ */
-    const [messageHistory, setMessageHistory] = useState<MessageInterface[]>([]);
+    const [messageList, setMessageList] = useState<MessageInterface[]>([]);
     const [cookies, setCookie] = useCookies(["token"]);
     const [member, setMember] = useState<string[]>([]);
 
@@ -37,8 +44,7 @@ export const useChat = () => {
             //     socket.emit('reconnect', cookies?.token);
             // }
         });
-        createdUser();
-        waitStartChat();
+        createdToken();
         startedChat();
         receiveMessage();
         socket.on("disconnect", (reason) => eL("on", "disconnect", reason));
@@ -54,19 +60,10 @@ export const useChat = () => {
     /**********************************************
      on
     **********************************************/
-    const createdUser = () => {
-        socket.on('createdUser', () => {
-            eL("on", "createdUser", JSON.stringify(socket.auth));// TODO K.Yoshimoto どうも、サーバーサイドで扱うものではないらしいな、トークン。
-            const auth: any = socket.auth;// socket.auth.tokenだと未定義エラーがでるので。TODO auth用型定義作るべき。
-            setCookie("token", auth.token ?? ""); // TODO K.Yosdhimoto セキュアにする。HttpOnlyなど
-        });
-    }
-    /**
-     * ルーム作成イベント受信 responseMakeRoom
-     */
-    const waitStartChat = () => {
-        socket.on('waitStartChat', () => {
-            eL("on", "waitStartChat");
+    const createdToken = () => {
+        socket.on('createdToken', () => {
+            eL("on", "createdToken");
+            // console.log("socketの中身",JSON.stringify(socket.));
         });
     }
     const startedChat = () => {
@@ -83,16 +80,15 @@ export const useChat = () => {
         // メッセージ受信イベント
         socket.on('receiveMessage', (params) => {
             eL("on", "receiveMessage", "省略");
-            const date = new Date(params.datetime);
             const response = {
-                userId: params.userId,
                 text: params.text,
-                datetime: date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds()// TODO ソートのキーとして利用したいので、時刻を表示する方法は考える(日付が消えるので不可になる)
+                unixtime: params.unixtime,// TODO ソートのキーとして利用したいので、時刻を表示する方法は考える(日付が消えるので不可になる)
+                isYou: params.isYou,
             }
-            setMessageHistory(pre => [...pre, response]);
-            /* useChatコンポーネントがrenderingされた場合に、messageHistoryステートが再宣言されるので、
-            ↓messageHistoryが空配列となってしまう。 */
-            // setMessageHistory([...messageHistory, response]);
+            setMessageList(pre => [...pre, response]);
+            /* useChatコンポーネントがrenderingされた場合に、messageListステートが再宣言されるので、
+            ↓messageListが空配列となってしまう。 */
+            // setMessageList([...messageList, response]);
         });
     }
 
@@ -114,15 +110,6 @@ export const useChat = () => {
 
         // メンバー存在チェック
         // TODO ユーザ作成済みかチェック
-    }
-    /**
-     * ユーザ作成
-     */
-    const createUser = () => {
-        // TODO ユーザ作成済みかチェック
-        startSocket();
-        eL("emit", "createUser");
-        socket.emit('createUser');
     }
 
     /**
@@ -158,10 +145,9 @@ export const useChat = () => {
     // }
     return {
         /** 現在のTODOリスト */
-        messageHistory,
+        messageList,
         member,
         cookies,// TODO デバッグ用削除予定
-        createUser,
         startChat,
         sendMessage,
     }

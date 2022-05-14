@@ -1,5 +1,9 @@
 // 便利なサイト https://bareynol.github.io/mui-theme-creator/
 import { ThemeOptions, createTheme } from '@mui/material/styles'
+export const themeDefault = (()=>{
+    return createTheme();
+})();
+
 export const themeA = (() => {
     const themeOptions: ThemeOptions = {
         palette: {
@@ -10,6 +14,9 @@ export const themeA = (() => {
             secondary: {
                 main: '#aae4d5',
             },
+            // tertiary: { // src\theme\themeOption.tsでモジュール拡張
+            //     main: '#ec407a',
+            // },
             background: {
                 default: '#F3D1E9',
                 paper: '#DCDA91',
@@ -37,9 +44,9 @@ export const themeB = (() => {
             secondary: {
                 main: '#80C542',
             },
-            tertiary: { // src\theme\themeOption.tsでモジュール拡張
-                main: '#ec407a',
-            },
+            // tertiary: { // src\theme\themeOption.tsでモジュール拡張
+            //     main: '#ec407a',
+            // },
             background: {
                 paper: 'rgb(241,239,239)',
                 default: '#6060A9',

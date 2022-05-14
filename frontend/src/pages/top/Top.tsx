@@ -4,12 +4,12 @@ import { Button } from '@mui/material';
 function Top() {
     return (
         <>
-            <h1>ホーム</h1>
+            <h1>トップ</h1>
             <Button
                 variant="contained"
                 component={Link}
                 to="app"
-                color="tertiary"
+                color="primary"
             >
                 app
             </Button>
@@ -20,6 +20,7 @@ function Top() {
             >
                 チャット開始
             </Button>
+            <hr />
         </>
     );
 }

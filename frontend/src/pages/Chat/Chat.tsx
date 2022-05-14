@@ -1,65 +1,25 @@
-import './Chat.css';
-import { useRef, useEffect } from 'react'
-
+import MessageArea from 'components/organisms/MessageArea';
+import AppBar from 'components/organisms/AppBar';
+import ChatBar from 'components/organisms/ChatBar';
+import Grid from '@mui/material/Grid';
 // カスタムフック 
 import { useChat } from "hooks/useChat";
 
-function Chat() {
-    useEffect(() => {
-        console.log("レンダリング Chat");
-    });
-    /** メッセージ用element */
-    const msgEl = useRef<HTMLInputElement>(null);
-
+const Chat = () => {
     const {
-        messageHistory,
-        member,
-        cookies,
-        createUser,
+        messageList,
         startChat,
         sendMessage,
     } = useChat();
 
-    const handleSendMessage = () => {
-        if (msgEl.current == null || msgEl.current.value == null) return;
-        sendMessage(msgEl.current.value);
-        msgEl.current.value = "";
-    }
     return (
-        <div className="Chat">
-            <hr />
-            <div style={{ display: "flex" }}>
-                <div style={{ border: "solid", width: "300px", backgroundColor: "#c8c2c6" }}>
-                    <b>ユーザ</b>
-                    <pre>トークン:<pre>{cookies.token}</pre></pre>
-                    <button onClick={createUser}>ユーザ作成</button>
-                </div>
-                <div style={{ border: "solid", width: "300px", backgroundColor: "#c8c2c6" }}>
-                    <b>ルーム</b>
-                    <pre>メンバー:<pre>{member.join("\n")}</pre></pre>
-                    <button onClick={startChat}>ルーム作成</button>
-                </div>
-            </div>
-            <hr />
-
-            <div>
-                <input type="text" ref={msgEl} />
-                <br />
-                <button onClick={handleSendMessage}>送信</button>
-                <div>
-                    {messageHistory.map((msg) => {
-                        return (
-                            <p key={msg.datetime}
-                                style={{ border: "solid", width: "350px", backgroundColor: "#bce2e8" }}
-                            >
-                                [{msg.datetime}]　{msg.text}
-                            </p>
-                        );
-                    })}
-                </div>
-            </div>
-        </div>
+        <>
+            <Grid container direction="column" sx={{ height: "100vh", minHeight: "100vh" }} /*sx={{width:"100vw",height:"100vh"}}*/>
+                <Grid item xs={1}><AppBar /></Grid>
+                <Grid item xs sx={{ height: "60px" }}><MessageArea messageList={messageList} /></Grid>
+                <Grid item xs={1}><ChatBar startChat={startChat} sendMessage={sendMessage} /></Grid>
+            </Grid>
+        </>
     );
 }
-
 export default Chat;

@@ -2,11 +2,16 @@ export interface HistoryInterface {
     isSelf: boolean;
     message: MessageInterface;
 }
+// export interface MessageInterface {
+//     userId: string;
+//     text: string;
+//     datetime?: string;
+//     isRead?: boolean;
+// };
 export interface MessageInterface {
-    userId: string;
     text: string;
-    datetime?: string;
-    isRead?: boolean;
+    unixtime: number;
+    isYou: boolean;
 };
 
 export interface SendMessageInterface {
@@ -14,9 +19,9 @@ export interface SendMessageInterface {
     text: string;
 };
 export interface ReceiveMessageInterface {
-    userId: string;
     text: string;
-    datetime: number;
+    unixtime: number;
+    isYou: boolean;
 };
 
 export interface ReceiveRoomConnectInterface {

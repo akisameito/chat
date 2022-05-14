@@ -12,6 +12,13 @@ const io = new Server<ClientToServerEventsInterface, ServerToClientEventsInterfa
     cors: {
         origin: ["http://localhost:3000", "http://localhost:8080"],
         credentials: true
+    },
+    cookie: { // TODO K,Yoshimoto tokenの持ち方
+        name: "testeststse",
+        maxAge: 86400,
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
     }
 });
 

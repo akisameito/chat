@@ -5,8 +5,8 @@ export interface ClientToServerEventsInterface { // on
     connect: () => void;
     // reconnectUser: (token: string) => void; // トークン所持の場合、ルームにいれるなど。
     connect_error: () => void;
-    createUser: () => void;
     disconnect: () => void;
+
     startChat: () => void;
     sendMessage: (params: SendMessageInterface) => void;
 }
@@ -23,19 +23,19 @@ export interface SendMessageInterface {
  */
 export interface ServerToClientEventsInterface {
     connect: () => void;
-    // reconnectedUser: (member?: string[]) => void;// TODO メッセージ
-    createdUser: () => void;
+    
+    createdToken: () => void;
     startedChat: (params: StartedChatInterface) => void;
-    waitStartChat: () => void;
     receiveMessage: (params: ReceiveMessageInterface) => void;
+    // reconnectedUser: (member?: string[]) => void;// TODO メッセージ
 }
 export interface StartedChatInterface {
     member: string[]
 }
 export interface ReceiveMessageInterface {
-    userId: string,
     text: string,
-    datetime: number
+    unixtime: number,
+    isYou: boolean,
 }
 // ----------------------------------------------------------------------------------------------------------------------
 export interface InterServerEventsInterface {
