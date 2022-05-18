@@ -15,4 +15,11 @@ export class RoomStore {
     static save(room: Room) {
         this.rooms.set(room.id, room);
     }
+    /**
+     * ルーム削除
+     * @param id
+     */
+    public static delete(id: Room["id"]) {
+        this.rooms.delete(id);
+    }
 }

@@ -13,11 +13,12 @@ import SendMessageInput from 'components/atoms/messageInput/MessageInput';
 import { UseChatInterface } from 'hooks/useChat';
 
 type Props = {
-    startChat: UseChatInterface["startChat"],
+    requestStartChat: UseChatInterface["requestStartChat"],
+    requestEndChat: UseChatInterface["requestEndChat"],
     sendMessage: UseChatInterface["sendMessage"]
 }
 
-const ChatBar = ({ startChat, sendMessage }: Props) => {
+const ChatBar = ({ requestStartChat, requestEndChat, sendMessage }: Props) => {
     /** メッセージ用element */
     const msgEl = useRef<HTMLInputElement>(null);
     const handleSendMessage = () => {
@@ -36,6 +37,7 @@ const ChatBar = ({ startChat, sendMessage }: Props) => {
                     color="inherit"
                     aria-label="exit"
                     sx={{ mr: 2 }}
+                    onClick={requestEndChat}
                 >
                     <LogoutIcon sx={{ transform: "scaleX(-1)" }} />
                 </IconButton>
@@ -60,7 +62,7 @@ const ChatBar = ({ startChat, sendMessage }: Props) => {
                 color="inherit"
                 aria-label="send"
                 sx={{ height: "100%" }}
-                onClick={startChat}
+                onClick={requestStartChat}
             >
                 <FiberNewIcon />
             </IconButton>

@@ -14,6 +14,7 @@ const ChatMessageList = ({ messageList }: Props) => {
     const rtn = messageList.map(({ text, unixtime, isYou }) => {
         return (
             <Message
+                key={unixtime}
                 sx={{ [isYou ? "marginLeft" : "marginRight"]: 5 }}
                 side={isYou ? "right" : "left"}
                 unixtime={unixtime}

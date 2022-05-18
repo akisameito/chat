@@ -54,6 +54,12 @@ export class Room implements RoomInterface {
         }
         this.member.push(userId);
     }
+
+    /**
+     * userIdがルームのメンバーかチェック
+     * @param userId 
+     * @returns 
+     */
     public isMember(userId: string) {
         return this.member.includes(userId);
     }

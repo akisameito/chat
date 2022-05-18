@@ -1,3 +1,4 @@
+import {v4} from 'uuid';
 /**
  * ユーザ情報
  */
@@ -27,12 +28,11 @@ export class User implements UserInterface {
     roomId: string = "";
     /**
      *  コンストラクタ
-     * @param socketId ソケットID
      * @param ip IP
      */
-    constructor(socketId: string, ip: string) {
-        this.id = this.makeId(socketId);
-        this.token = this.makeToken(socketId);
+    constructor(ip: string) {
+        this.id = this.makeId();
+        this.token = this.makeToken();
         this.ip = ip;
         this.datetime = Date.now();
     }
@@ -49,15 +49,15 @@ export class User implements UserInterface {
      * @param socketId 
      * @return ID
      */
-    private makeId(socketId: string): UserInterface["id"] {
-        return "userId_" + socketId;
+    private makeId(): UserInterface["id"] {
+        return "userId_" + v4();
     }
     /**
      * トークン作成
      * @param socketId 
      * @return 秘密鍵
      */
-    private makeToken(socketId: string): UserInterface["token"] {
-        return "token_" + socketId;
+    private makeToken(): UserInterface["token"] {
+        return "token_" + v4();
     }
 };

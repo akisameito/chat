@@ -8,7 +8,8 @@ import { useChat } from "hooks/useChat";
 const Chat = () => {
     const {
         messageList,
-        startChat,
+        requestStartChat,
+        requestEndChat,
         sendMessage,
     } = useChat();
 
@@ -17,7 +18,7 @@ const Chat = () => {
             <Grid container direction="column" sx={{ height: "100vh", minHeight: "100vh" }} /*sx={{width:"100vw",height:"100vh"}}*/>
                 <Grid item xs={1}><AppBar /></Grid>
                 <Grid item xs sx={{ height: "60px" }}><MessageArea messageList={messageList} /></Grid>
-                <Grid item xs={1}><ChatBar startChat={startChat} sendMessage={sendMessage} /></Grid>
+                <Grid item xs={1}><ChatBar requestStartChat={requestStartChat} requestEndChat={requestEndChat} sendMessage={sendMessage} /></Grid>
             </Grid>
         </>
     );

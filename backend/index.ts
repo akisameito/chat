@@ -12,13 +12,6 @@ const io = new Server<ClientToServerEventsInterface, ServerToClientEventsInterfa
     cors: {
         origin: ["http://localhost:3000", "http://localhost:8080"],
         credentials: true
-    },
-    cookie: { // TODO K,Yoshimoto tokenの持ち方
-        name: "testeststse",
-        maxAge: 86400,
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
     }
 });
 
@@ -59,6 +52,39 @@ app.get('/api/test', function (req, res) { res.json({ test: 'テストAPI' }); }
 // // チャットログ出力
 // app.post('/api/exportChatLog', (req: express.Request, res: express.Response) => { });
 
+/**********************************************
+ socketIOミドルウェア
+**********************************************/
+// io.use((socket, next) => {
+//     const token = socket.handshake.auth.token;
+//     if (!token) {
+//         return next(new Error("invalid token"));
+//     }
+//     // socket.token = token;
+//     next();
+// });
+// io.use((socket, next) => {
+//     const token = socket.handshake.auth.token;
+//     if (token) {
+//         // find existing session
+//         const session = sessionStore.findSession(token);
+//         if (session) {
+//             socket.token = token;
+//             socket.userID = session.userID;
+//             socket.username = session.username;
+//             return next();
+//         }
+//     }
+//     const username = socket.handshake.auth.username;
+//     if (!username) {
+//         return next(new Error("invalid username"));
+//     }
+//     // create new session
+//     socket.sessionID = randomId();
+//     socket.userID = randomId();
+//     socket.username = username;
+//     next();
+// });
 /**********************************************
  socketIO処理
 **********************************************/

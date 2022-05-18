@@ -5,7 +5,7 @@ import { Typography } from '@mui/material';
  * @returns H:mm
  */
 const getTime = (unixtime: Props["unixtime"]) => {
-    const date = new Date(unixtime * 1000);
+    const date = new Date(unixtime);
     const min = (`00${date.getMinutes()}`).slice(-2);
     return `${date.getHours()}:${min}`;
 }
